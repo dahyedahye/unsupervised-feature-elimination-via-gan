@@ -1,0 +1,96 @@
+[Data]     Hair: /home01/kaggle/train_hair.csv
+[Data]     Non Hair: /home01/kaggle/train_non_hair.csv
+[Optim]    Total Epoch: 500
+[Optim]    Train Batch Size: 8
+[Optim]    Test Batch Size: 8
+[Optim]    Learning Rate (Discriminator): 0.0001
+[Optim]    Learning Rate (Generator): 0.0001
+[Optim]    Beta1 (Discriminator): 0.5
+[Optim]    Beta1 (Generator): 0.5
+[Optim]    Beta2 (Discriminator): 0.999
+[Optim]    Beta2 (Generator): 0.999
+[Optim]    Num Discriminator: 5
+[Coeff]    [Discriminator] Lambda GP: 10
+[Coeff]    [Generator] Lambda Distance: 1.0
+[Network]  In Channel: 3
+[Network]  Out Channel: 3
+[Network]  Discriminator Model: vgg
+[Network]  Generator Model: vgg
+**************** Discriminator Structure ****************
+[*] num of params: 11408129
+[*] model structure: CNNDiscriminator(
+  (model): Sequential(
+    (0): Conv2d(3, 64, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), bias=False)
+    (1): LeakyReLU(negative_slope=0.2, inplace=True)
+    (2): Conv2d(64, 128, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), bias=False)
+    (3): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (4): LeakyReLU(negative_slope=0.2, inplace=True)
+    (5): Conv2d(128, 256, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), bias=False)
+    (6): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (7): LeakyReLU(negative_slope=0.2, inplace=True)
+    (8): Conv2d(256, 512, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), bias=False)
+    (9): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (10): LeakyReLU(negative_slope=0.2, inplace=True)
+    (11): Conv2d(512, 1024, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), bias=False)
+    (12): LeakyReLU(negative_slope=0.2, inplace=True)
+  )
+  (linear): Sequential(
+    (0): Linear(in_features=262144, out_features=1, bias=True)
+  )
+)
+**************** Generator Model Structure ****************
+[*] num of params: 1111296
+[*] model structure: ResizeCNNGenerator(
+  (encoder1): Sequential(
+    (0): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+    (1): LeakyReLU(negative_slope=0.2, inplace=True)
+  )
+  (encoder2): Sequential(
+    (0): Conv2d(64, 64, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+    (1): BatchNorm2d(64, eps=0.8, momentum=0.1, affine=True, track_running_stats=True)
+    (2): LeakyReLU(negative_slope=0.2, inplace=True)
+  )
+  (encoder3): Sequential(
+    (0): Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+    (1): BatchNorm2d(128, eps=0.8, momentum=0.1, affine=True, track_running_stats=True)
+    (2): LeakyReLU(negative_slope=0.2, inplace=True)
+  )
+  (encoder4): Sequential(
+    (0): Conv2d(128, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+    (1): BatchNorm2d(128, eps=0.8, momentum=0.1, affine=True, track_running_stats=True)
+    (2): LeakyReLU(negative_slope=0.2, inplace=True)
+  )
+  (encoder5): Sequential(
+    (0): Conv2d(128, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+    (1): BatchNorm2d(256, eps=0.8, momentum=0.1, affine=True, track_running_stats=True)
+    (2): LeakyReLU(negative_slope=0.2, inplace=True)
+  )
+  (decoder1): Sequential(
+    (0): Conv2d(256, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+    (1): BatchNorm2d(128, eps=0.8, momentum=0.1, affine=True, track_running_stats=True)
+    (2): LeakyReLU(negative_slope=0.2, inplace=True)
+  )
+  (decoder2): Sequential(
+    (0): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+    (1): BatchNorm2d(128, eps=0.8, momentum=0.1, affine=True, track_running_stats=True)
+    (2): LeakyReLU(negative_slope=0.2, inplace=True)
+  )
+  (decoder3): Sequential(
+    (0): Upsample(scale_factor=2.0, mode=nearest)
+    (1): ReflectionPad2d((1, 1, 1, 1))
+    (2): Conv2d(128, 64, kernel_size=(3, 3), stride=(1, 1), bias=False)
+    (3): BatchNorm2d(64, eps=0.8, momentum=0.1, affine=True, track_running_stats=True)
+    (4): LeakyReLU(negative_slope=0.2, inplace=True)
+  )
+  (decoder4): Sequential(
+    (0): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+    (1): BatchNorm2d(64, eps=0.8, momentum=0.1, affine=True, track_running_stats=True)
+    (2): LeakyReLU(negative_slope=0.2, inplace=True)
+  )
+  (decoder5): Sequential(
+    (0): Upsample(scale_factor=2.0, mode=nearest)
+    (1): ReflectionPad2d((1, 1, 1, 1))
+    (2): Conv2d(64, 3, kernel_size=(3, 3), stride=(1, 1), bias=False)
+    (3): Sigmoid()
+  )
+)
