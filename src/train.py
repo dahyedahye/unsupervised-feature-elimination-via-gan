@@ -1,12 +1,4 @@
-"""
-Codes for training a hair-removal networking using WGAN-GP.
-For the WGAN-GP loss and algorithm parts,
-https://github.com/eriklindernoren/PyTorch-GAN/tree/master/implementations/wgan_gp is used
-"""
-
-
 from __future__ import print_function
-#%matplotlib inline
 import argparse
 import os
 import random
@@ -82,7 +74,9 @@ cuda_id = config.cuda_id
 
 # config - coefficient
 lambda_gp = config.lambda_gp
+lambda_gan = config.lambda_gan
 lambda_distance = config.lambda_distance 
+lambda_r1 = config.lambda_r1
 
 # config - optimization
 num_epoch = config.num_epoch
@@ -103,13 +97,15 @@ num_discriminator = config.num_discriminator
 # ================================================
 
 
-
 # Set file names or dirs to debug or save training result
-experiment_name = '{}_{}_lamdis{}_lamgp{}_lrd{}_lrg{}_bs{}_ndisc{}_nep{}_ex{}'.format(
+experiment_name = '{}_{}_h{}_w{}_lamgan_{}_lamdis{}_lamr1{}_lrd{}_lrg{}_bs{}_ndisc{}_nep{}_ex{}'.format(
                                 datetime.datetime.now().strftime('%Y%m%d'),
                                 file_prefix,
+                                height,
+                                width,
+                                lambda_gan,
                                 lambda_distance,
-                                lambda_gp,
+                                lambda_r1,
                                 lr_d,
                                 lr_g,
                                 train_batch_size,
@@ -121,12 +117,14 @@ experiment_name = experiment_name.replace(".","")
 
 # dirs to save result files
 dir_output = '{}/output'.format(dir_output)
+dir_image = '{}/image'.format(dir_output)
+dir_model = '{}/model'.format(dir_output)
 dir_train_info = '{}/train_info'.format(dir_output)
 
 # dirs to save result images and learning curves
-dir_save_output_monitor_train = '{}/{}_monitor_train'.format(dir_output, experiment_name) # image to monitor train
+dir_save_output_monitor_train = '{}/{}_monitor_train'.format(dir_image, experiment_name) # image to monitor train
 
-directories = [dir_output, dir_train_info, dir_save_output_monitor_train]
+directories = [dir_output, dir_image, dir_model, dir_train_info, dir_save_output_monitor_train]
 
 # create dirs to save learning result if they don't exist.
 for directory in directories:
@@ -181,6 +179,35 @@ def compute_gradient_penalty(D, real_samples, fake_samples):
     gradients = gradients.view(gradients.size(0), -1)
     gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
     return gradient_penalty
+
+
+
+
+# ========================================
+#  define functions for parameters update
+# ========================================
+# https://github.com/LMescheder/GAN_stability/blob/c1f64c9efeac371453065e5ce71860f4c2b97357/gan_training/train.py
+def compute_loss(output_critic, target):
+    targets = output_critic.new_full(size=output_critic.size(), fill_value=target)
+    loss = F.binary_cross_entropy_with_logits(output_critic, targets)
+    return loss
+
+def toggle_grad(model, requires_grad):
+    for p in model.parameters():
+        p.requires_grad_(requires_grad)
+
+def compute_grad2(d_out, x_in):
+    batch_size = x_in.size(0)
+    grad_dout = autograd.grad(
+        outputs=d_out.sum(), inputs=x_in,
+        create_graph=True, retain_graph=True, only_inputs=True
+    )[0]
+    grad_dout2 = grad_dout.pow(2)
+    assert(grad_dout2.size() == x_in.size())
+    reg = grad_dout2.view(batch_size, -1).sum(1)
+    return reg
+
+
 
 
 # ===================================
@@ -317,11 +344,13 @@ with open(txt_train_info, 'a') as t:
 # ==================================================
 losses_d = []
 losses_g = []
+losses_g_gan = []
 losses_distance = []
 
 # ==============================
 #         Start Training
 # ==============================
+total_iter = 0
 time_total_start = time() # set a start time to monitor training time
 for epoch in range(num_epoch):
     time_train_epoch_start = time() # set an epoch start time to monitor training time per epoch
@@ -341,6 +370,7 @@ for epoch in range(num_epoch):
 
     for i, data_hair in enumerate(loader_train_hair, 0):
 
+
         # iterate dataloader_input at the same time
         try:
             data_non_hair = next(dataloader_iterator)
@@ -356,23 +386,38 @@ for epoch in range(num_epoch):
         #       Train Discriminator
         # ------------------------------- 
 
-        # get hair-removed output from the generator model
-        output_hair_removed = model_g(imgs_hair)
+        toggle_grad(model_d, True)
+        toggle_grad(model_g, False)
 
         # remove gradients on the computational graph of the discriminator
         optimizer_d.zero_grad()
+
+        # make the gradients of non hair images computable
+        imgs_non_hair.requires_grad_()
         # get scores of non-hair images from the discriminator
         validity_non_hair = model_d(imgs_non_hair)
+        # compute loss
+        loss_d_non_hair = compute_loss(validity_non_hair, 1)
+        loss_d_non_hair.backward(retain_graph=True)
+        reg = lambda_r1 * compute_grad2(validity_non_hair, imgs_non_hair).mean()
+        reg.backward()
+
+        with torch.no_grad():
+            # get hair-removed output from the generator model
+            output_hair_removed = model_g(imgs_hair)
+
         # get scores of hair-removed images from the discriminator
         validity_hair_removed = model_d(output_hair_removed)
 
         # compute a loss for the discriminator
-        # compute Gradient_penalty for WGAN-GP loss
-        gradient_penalty = compute_gradient_penalty(model_d, imgs_non_hair.data, output_hair_removed.data)
-        # Adversarial loss using WGAN-GP
-        loss_d = -torch.mean(validity_non_hair) + torch.mean(validity_hair_removed) + (lambda_gp * gradient_penalty)
+        # GAN loss with R1 regularizer
+        loss_d_non_hair_fake = compute_loss(validity_hair_removed, 0)
+
+        loss_d_non_hair_fake.backward()
+
+        # full loss
+        loss_d = loss_d_non_hair + reg + loss_d_non_hair_fake
         losses_d.append(loss_d.item())
-        loss_d.backward()
 
         # optimize discriminator
         optimizer_d.step()
@@ -380,6 +425,8 @@ for epoch in range(num_epoch):
 
         if i % num_discriminator == 0:
             model_g.train()
+            toggle_grad(model_d, False)
+            toggle_grad(model_g, True)
             # ---------------------
             #    Train Generator
             # ---------------------
@@ -393,9 +440,12 @@ for epoch in range(num_epoch):
             # compute distance between the original hair images and their hair-removed outputs of generator
             distance = F.l1_loss(imgs_hair, output_hair_removed)
             # Final loss = Adversarial loss using WGAN-GP + distance
-            loss_g = -torch.mean(validity_fake) + (lambda_distance * distance)
+            targets = validity_fake.new_full(size=validity_fake.size(), fill_value=1)
+            loss_g_gan = F.binary_cross_entropy_with_logits(validity_fake, targets)
+            loss_g = (lambda_gan * loss_g_gan) + (lambda_distance * distance)
             losses_g.append(loss_g.item())
             losses_distance.append(distance.item())
+            losses_g_gan.append(loss_g_gan.item())
             loss_g.backward()
 
             # optimize generator
@@ -453,13 +503,14 @@ for epoch in range(num_epoch):
                 curve_titles = [
                     "Discriminator Loss",
                     "Generator Loss",
-                    "Distance"
+                    "Distance",
+                    "Generator GAN Loss"
                                 ]
-                curve_data = [[losses_d], [losses_g], [losses_distance]]
-                curve_labels = [["loss_d"], ["loss_g"], ["distance"]]
-                curve_xlabels = ["iterations", "iterations", "iterations"]
-                curve_ylabels = ["loss", "loss", "distance"]
-                curve_filenames = ["learn-curve-loss-d", "learn-curve-loss-g", "learn-curve-distance"]
+                curve_data = [[losses_d], [losses_g], [losses_distance], [losses_g_gan]]
+                curve_labels = [["loss_d"], ["loss_g"], ["distance"], "loss_g_gan"]
+                curve_xlabels = ["iterations", "iterations", "iterations", "iterations"]
+                curve_ylabels = ["loss", "loss", "distance", "loss"]
+                curve_filenames = ["learn-curve-loss-d", "learn-curve-loss-g", "learn-curve-distance", "learn-curve-loss-gan"]
 
                 
                 for i_curve, curve_data in enumerate(curve_data):
@@ -475,3 +526,32 @@ for epoch in range(num_epoch):
                     plt.savefig(file_name, bbox_inches='tight', pad_inches=0.1)
                     plt.clf()
                     plt.close()
+
+                plt.figure(figsize=(10,5))
+                plt.title("GAN Loss")
+                plt.plot(losses_d,label="loss_d")
+                plt.plot(losses_g_gan,label="loss_g_gan")
+                plt.xlabel("iterations")
+                plt.ylabel("loss")
+                plt.legend()
+                file_name = '{}/learn-curve-loss-gan'.format(dir_save_output_monitor_train)
+                plt.show()
+                plt.savefig(file_name, bbox_inches='tight', pad_inches=0.1)
+                plt.clf()
+                plt.close()
+
+                         
+
+
+        total_iter += 1
+        if total_iter % 1000 == 0:
+            torch.save({
+                'epoch': epoch,
+                'total_iter': total_iter,
+                'discriminator': model_d,
+                'generator': model_g,
+            }, '{}/{}.pth'.format(dir_model, experiment_name))
+            print('[*] model is saved at iteration {}'.format(total_iter))
+
+
+            

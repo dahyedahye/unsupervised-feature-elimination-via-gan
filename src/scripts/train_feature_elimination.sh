@@ -1,12 +1,12 @@
-python ../train.py \
-  --file_prefix='l1' \
+python ../train_hair_removal_r1.py \
+  --file_prefix='r1_l1' \
   --experiment_count=1 \
-  --dir_output='/home/dahye/2020summer/2020summer-proj/hair_removal/result' \
+  --dir_output='/nas/users/dahye/hair_removal_result' \
   --sample_interval=300 \
   --num_plot_img=4 \
-  --dir_train_data_image='/home01/kaggle/jpeg/train' \
-  --dir_data_csv_hair='/home01/kaggle/train_hair.csv' \
-  --dir_data_csv_non_hair='/home01/kaggle/train_non_hair.csv' \
+  --dir_train_data_image='/nas/users/dahye/dataset/hair_removal/jpeg/train' \
+  --dir_data_csv_hair='/nas/users/dahye/hair_removal/label/train_hair.csv' \
+  --dir_data_csv_non_hair='/nas/users/dahye/hair_removal/label/train_hair_less.csv' \
   --image_format='jpg' \
   --height=512 \
   --width=512 \
@@ -15,12 +15,14 @@ python ../train.py \
   --num_out_channel=3 \
   --network_d='vgg' \
   --network_g='vgg' \
-  --num_workers=16 \
+  --num_workers=6 \
   --multi_gpu=False \
   --num_gpu=1 \
-  --cuda_id='cuda:2' \
+  --cuda_id='cuda:0' \
   --lambda_gp=10 \
+  --lambda_gan=1000000 \
   --lambda_distance=1 \
+  --lambda_r1=10 \
   --num_epoch=500 \
   --train_batch_size=8 \
   --test_batch_size=8 \
