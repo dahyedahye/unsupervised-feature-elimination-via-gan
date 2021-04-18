@@ -1,12 +1,12 @@
 python ../train_hair_removal_r1.py \
   --file_prefix='r1_l1' \
   --experiment_count=1 \
-  --dir_output='/nas/users/dahye/hair_removal_result' \
+  --dir_output='unsupervised_feature_elimination_via_gan/result' \
   --sample_interval=300 \
   --num_plot_img=4 \
-  --dir_train_data_image='/nas/users/dahye/dataset/hair_removal/jpeg/train' \
-  --dir_data_csv_hair='/nas/users/dahye/hair_removal/label/train_hair.csv' \
-  --dir_data_csv_non_hair='/nas/users/dahye/hair_removal/label/train_hair_less.csv' \
+  --dir_train_data_image='unsupervised_feature_elimination_via_gan/dataset/jpeg/train' \
+  --dir_data_csv_hair='unsupervised_feature_elimination_via_gan/label/train_hair.csv' \
+  --dir_data_csv_non_hair='unsupervised_feature_elimination_via_gan/label/train_hairless.csv' \
   --image_format='jpg' \
   --height=512 \
   --width=512 \
