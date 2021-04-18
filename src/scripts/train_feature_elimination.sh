@@ -1,4 +1,4 @@
-python ../train_hair_removal.py \
+python ../train.py \
   --file_prefix='l1' \
   --experiment_count=1 \
   --dir_output='/home/dahye/2020summer/2020summer-proj/hair_removal/result' \

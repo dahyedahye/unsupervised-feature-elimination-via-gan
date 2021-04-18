@@ -1,5 +1,5 @@
 # Unsupervised Feature Elimination via Generative Adversarial Networks: Application to Hair Removal in Melanoma Classification
-This repository contains source codes to train an unsupervised feature elimination algorithm using GAN and demonstrate it to hair removal task for melanoma classification.
+This repository contains source codes to train an unsupervised feature elimination algorithm using GAN and demonstrate it in hair removal task for melanoma classification.
 
 ## Prerequisites
 - Melanoma Hair Removal Dataset ([Link to the dataset website](https://www.kaggle.com/c/siim-isic-melanoma-classification/data))
